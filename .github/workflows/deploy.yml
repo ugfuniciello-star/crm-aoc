@@ -18,15 +18,9 @@ jobs:
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
 
-      - name: Configure git
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-
       - name: Deploy to gh-pages
-        run: |
-          cd dist
-          git init
-          git add -A
-          git commit -m "Deploy CRM AOC"
-          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ugfuniciello-star/crm-aoc.git" HEAD:gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
