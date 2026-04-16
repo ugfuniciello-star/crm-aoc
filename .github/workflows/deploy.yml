@@ -15,16 +15,20 @@ jobs:
           mkdir -p dist
           sed "s|%%GIST_TOKEN%%|${GIST_TOKEN}|g" index.html > dist/index.html
           touch dist/.nojekyll
+          echo "Files in dist:"
+          ls -la dist/
+          echo "First line of dist/index.html:"
+          head -1 dist/index.html
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
 
-      - name: Deploy to gh-pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: dist
-          branch: gh-pages
-          token: ${{ secrets.GITHUB_TOKEN }}
-          git-config-name: GitHub Actions
-          git-config-email: actions@github.com
-          clean: true
-          single-commit: true
+      - name: Push to gh-pages
+        run: |
+          cd dist
+          git init
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add -A
+          git commit -m "Deploy CRM AOC"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ugfuniciello-star/crm-aoc.git"
+          git push --force origin HEAD:gh-pages
