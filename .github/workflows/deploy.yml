@@ -3,20 +3,30 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Inject token
         run: |
           mkdir -p dist
           sed "s|%%GIST_TOKEN%%|${GIST_TOKEN}|g" index.html > dist/index.html
-          cp .nojekyll dist/.nojekyll
+          echo "" > dist/.nojekyll
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-      - name: Deploy
+
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
