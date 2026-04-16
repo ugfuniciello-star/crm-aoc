@@ -4,31 +4,31 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Inject token into HTML
+      - name: Inject token
         run: |
-          mkdir -p dist
-          sed "s|%%GIST_TOKEN%%|${GIST_TOKEN}|g" index.html > dist/index.html
-          touch dist/.nojekyll
-          echo "Files in dist:"
-          ls -la dist/
-          echo "First line of dist/index.html:"
-          head -1 dist/index.html
+          sed "s|%%GIST_TOKEN%%|${GIST_TOKEN}|g" index.html > index_deployed.html
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
 
-      - name: Push to gh-pages
+      - name: Checkout gh-pages and deploy
         run: |
-          cd dist
-          git init
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git add -A
-          git commit -m "Deploy CRM AOC"
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ugfuniciello-star/crm-aoc.git"
-          git push --force origin HEAD:gh-pages
+          git fetch origin gh-pages
+          git checkout gh-pages
+          cp index_deployed.html index.html
+          git add index.html
+          git diff --staged --quiet || git commit -m "Deploy $(date)"
+          git push origin gh-pages
