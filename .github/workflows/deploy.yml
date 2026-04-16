@@ -4,29 +4,29 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject token
+      - name: Inject token into HTML
         run: |
           mkdir -p dist
           sed "s|%%GIST_TOKEN%%|${GIST_TOKEN}|g" index.html > dist/index.html
-          echo "" > dist/.nojekyll
+          touch dist/.nojekyll
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          personal_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
-          force_orphan: true
+      - name: Configure git
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+
+      - name: Deploy to gh-pages
+        run: |
+          cd dist
+          git init
+          git add -A
+          git commit -m "Deploy CRM AOC"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/ugfuniciello-star/crm-aoc.git" HEAD:gh-pages
