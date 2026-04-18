@@ -3839,7 +3839,7 @@ function renderImpactos(){
  }
 
 
- el.innerHTML = html;
+ el.innerHTML = goalHtml + html;
 }
 
 
@@ -3924,10 +3924,85 @@ function saveResSem(){ localStorage.setItem(SK_RES_SEM,JSON.stringify(resSemData
 
 let resWeekOff = 0;
 
+
+// ── PANEL OBJETIVO ANUAL ──────────────────────────────────────────────────
+const COM_MEDIA = 165;
+const BASE_ANUAL = 14400;
+const GOALS = [24000, 30000, 36000, 42000];
+let goalActivo = parseInt(localStorage.getItem('crm-goal') || '30000');
+
+function setGoal(g){ goalActivo = g; localStorage.setItem('crm-goal', g); renderResumenMensual(); }
+
+function renderGoalPanel(){
+  // Calcular comisión acumulada real (firmados en funnel)
+  const firmados = funnel.filter(l => (l.situacion||'').toUpperCase() === 'FIRMADO');
+  const comAcum = firmados.reduce((s, l) => {
+    const mw = parseFloat(l.mw) || 0;
+    // Tabla comisiones captación
+    const COM_TABLE = [[0,15,17],[15,30,27],[30,50,122],[50,100,222],[100,150,215],
+      [150,200,250],[200,250,280],[250,300,290],[300,400,310],[400,9999,325]];
+    for(const [lo,hi,e] of COM_TABLE){ if(mw>=lo && mw<hi) return s+e; }
+    return s + COM_MEDIA;
+  }, 0);
+
+  const comNecesaria = goalActivo - BASE_ANUAL;
+  const pct = Math.min(100, Math.round(comAcum / comNecesaria * 100));
+  const falta = Math.max(0, comNecesaria - comAcum);
+  const contratosAño = Math.ceil(comNecesaria / COM_MEDIA);
+  const contratosMes = Math.ceil(contratosAño / 12);
+  const contratosSem = (contratosAño / 52).toFixed(1);
+  const semColor = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const mesActual = new Date().getMonth() + 1;
+  const pctTiempo = Math.round(mesActual / 12 * 100);
+  const onTrack = pct >= pctTiempo;
+
+  return `<div style="background:linear-gradient(135deg,#1a3a5c 0%,#1a5c8f 100%);border-radius:14px;padding:20px 24px;margin-bottom:20px;border:1px solid #1a5c8f40">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#93c5fd;margin-bottom:4px">Objetivo Anual</div>
+        <div style="font-size:22px;font-weight:800;color:#fff">${goalActivo.toLocaleString('es-ES')} €</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${GOALS.map(g => `<button onclick="setGoal(${g})" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${g===goalActivo?'#3b82f6':'#1e3a5f'};background:${g===goalActivo?'#3b82f6':'transparent'};color:${g===goalActivo?'#fff':'#93c5fd'};font-size:12px;font-weight:700;cursor:pointer">${(g/1000).toFixed(0)}k€</button>`).join('')}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px">
+      <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Comisión acumulada</div>
+        <div style="font-size:20px;font-weight:700;color:#4ade80">${Math.round(comAcum).toLocaleString('es-ES')} €</div>
+        <div style="font-size:11px;color:#6b8fa8">${firmados.length} contratos firmados</div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Falta para el objetivo</div>
+        <div style="font-size:20px;font-weight:700;color:${semColor}">${Math.round(falta).toLocaleString('es-ES')} €</div>
+        <div style="font-size:11px;color:#6b8fa8">${Math.ceil(falta/COM_MEDIA)} contratos aprox.</div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Ritmo necesario</div>
+        <div style="font-size:20px;font-weight:700;color:#f5c542">${contratosMes}/mes</div>
+        <div style="font-size:11px;color:#6b8fa8">${contratosSem}/semana · ${contratosAño}/año</div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Estado</div>
+        <div style="font-size:16px;font-weight:700;color:${onTrack?'#4ade80':'#f87171'}">${onTrack?'✓ En camino':'⚠ Por debajo'}</div>
+        <div style="font-size:11px;color:#6b8fa8">${pct}% del obj. · mes ${mesActual}/12</div>
+      </div>
+    </div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px">
+      <div style="height:100%;border-radius:8px;background:linear-gradient(90deg,${semColor},${semColor}cc);width:${pct}%;transition:width .6s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b8fa8">
+      <span>0 €</span><span style="color:${semColor};font-weight:700">${pct}% conseguido</span><span>${Math.round(comNecesaria).toLocaleString('es-ES')} €</span>
+    </div>
+  </div>`;
+}
+
 function renderResumenMensual(){
  loadRes(); loadImp(); loadResSem();
  const el = document.getElementById('resumenPanel');
  if(!el) return;
+ // Inject goal panel at top
+ let goalHtml = renderGoalPanel();
 
  const now = new Date();
  if(!resumenMesActivo) resumenMesActivo = MESES_ES[now.getMonth()]+' '+now.getFullYear();
