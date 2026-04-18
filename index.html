@@ -3938,12 +3938,26 @@ function renderGoalPanel(){
   const firmados = funnel.filter(l => (l.situacion||'').toUpperCase() === 'FIRMADO');
   const comAcum = firmados.reduce((s, l) => {
     const mw = parseFloat(l.mw) || 0;
-    // Tabla comisiones captación
     const COM_TABLE = [[0,15,17],[15,30,27],[30,50,122],[50,100,222],[100,150,215],
       [150,200,250],[200,250,280],[250,300,290],[300,400,310],[400,9999,325]];
     for(const [lo,hi,e] of COM_TABLE){ if(mw>=lo && mw<hi) return s+e; }
     return s + COM_MEDIA;
   }, 0);
+
+  // Comisión del mes actual
+  const now = new Date();
+  const mesNow = MESES_ES[now.getMonth()] + ' ' + now.getFullYear();
+  const firmadosMes = firmados.filter(l => (l.mes||'') === mesNow);
+  const comMes = firmadosMes.reduce((s, l) => {
+    const mw = parseFloat(l.mw) || 0;
+    const COM_TABLE = [[0,15,17],[15,30,27],[30,50,122],[50,100,222],[100,150,215],
+      [150,200,250],[200,250,280],[250,300,290],[300,400,310],[400,9999,325]];
+    for(const [lo,hi,e] of COM_TABLE){ if(mw>=lo && mw<hi) return s+e; }
+    return s + COM_MEDIA;
+  }, 0);
+  const comNecMes = Math.ceil((goalActivo - BASE_ANUAL) / 12);
+  const pctMes = Math.min(100, Math.round(comMes / comNecMes * 100));
+  const semMes = pctMes >= 80 ? '#4ade80' : pctMes >= 50 ? '#f59e0b' : '#ef4444';
 
   const comNecesaria = goalActivo - BASE_ANUAL;
   const pct = Math.min(100, Math.round(comAcum / comNecesaria * 100));
@@ -3971,6 +3985,11 @@ function renderGoalPanel(){
         <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Comisión acumulada</div>
         <div style="font-size:20px;font-weight:700;color:#4ade80">${Math.round(comAcum).toLocaleString('es-ES')} €</div>
         <div style="font-size:11px;color:#6b8fa8">${firmados.length} contratos firmados</div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
+        <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Comisión este mes</div>
+        <div style="font-size:20px;font-weight:700;color:${semMes}">${Math.round(comMes).toLocaleString('es-ES')} €</div>
+        <div style="font-size:11px;color:#6b8fa8">${firmadosMes.length} contratos · obj. ${comNecMes.toLocaleString('es-ES')}€/mes</div>
       </div>
       <div style="background:rgba(0,0,0,.25);border-radius:10px;padding:12px 14px">
         <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Falta para el objetivo</div>
